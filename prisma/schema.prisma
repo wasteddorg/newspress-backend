@@ -1,6 +1,5 @@
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -8,88 +7,80 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 model User {
-  id            String  @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String
-  email         String  @unique
-  emailVerified Boolean @default(false)
+  email         String    @unique
   image         String?
-  role          Role    @default(USER)
-
-  posts    Post[]
-  comments Comment[]
-
-  sessions Session[]
-  accounts Account[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  status String? @default("ACTIVE")
+  role          Role      @default(USER)
+  status        String?   @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  emailVerified Boolean   @default(false)
+  comments      Comment[]
+  posts         Post[]
+  accounts      Account[]
+  sessions      Session[]
 
   @@map("user")
 }
 
 model Category {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  slug      String   @unique
-  posts     Post[]
-  createdAt DateTime @default(now())
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  createdAt DateTime   @default(now())
+  parentId  String?
+  parent    Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("SubCategories")
+  
+  // এই রিলেশনগুলো পোস্টে লাগবে
+  posts        Post[] @relation("MainCategory")
+  subCategoryPosts Post[] @relation("SubCategory")
+
+  @@index([parentId])
 }
 
 model Post {
-  id            String  @id @default(cuid())
+  id            String    @id @default(cuid())
   title         String
-  slug          String  @unique
-  content       String  @db.Text
-  summary       String? @db.Text
+  slug          String    @unique
+  content       String
+  summary       String?
   featuredImage String
   imageCaption  String?
   videoUrl      String?
+  isFeatured    Boolean   @default(false)
+  isBreaking    Boolean   @default(false)
+  viewCount     Int       @default(0)
+  status        String    @default("PUBLISHED")
+  authorId      String
+  
+  // এখানে পরিবর্তন: মেইন ক্যাটাগরি এবং সাব-ক্যাটাগরি আলাদা করা হয়েছে
+  categoryId    String
+  category      Category  @relation("MainCategory", fields: [categoryId], references: [id])
+  
+  subCategoryId String?
+  subCategory   Category? @relation("SubCategory", fields: [subCategoryId], references: [id])
 
-  isFeatured Boolean @default(false)
-  isBreaking Boolean @default(false)
-  viewCount  Int     @default(0)
-  status     String  @default("PUBLISHED")
-
-  authorId String
-  author   User   @relation(fields: [authorId], references: [id])
-
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
-
-  comments Comment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  comments      Comment[]
+  author        User      @relation(fields: [authorId], references: [id])
 
   @@index([categoryId])
+  @@index([subCategoryId])
   @@index([isBreaking])
 }
-
 model Comment {
   id         String   @id @default(cuid())
   text       String
   isApproved Boolean  @default(false)
-
   postId     String
-  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
-
-  parentId   String?
-  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    Comment[] @relation("CommentReplies")
-
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
 }
 
 model Session {
@@ -112,7 +103,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -122,6 +112,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("account")
@@ -137,4 +128,9 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+enum Role {
+  USER
+  ADMIN
 }

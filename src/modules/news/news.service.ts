@@ -1,5 +1,11 @@
 import { prisma } from "../../lib/prisma.js";
 
+const getAnyUser = async () => {
+    return await prisma.user.findFirst({
+        select: { id: true }
+    });
+};
+
 const createNews = async (data: any, authorId: string) => {
     const baseSlug = data.title
         .trim()
@@ -13,7 +19,17 @@ const createNews = async (data: any, authorId: string) => {
 
     return await prisma.post.create({
         data: {
-            ...data,
+            title: data.title,
+            content: data.content,
+            summary: data.summary,
+            featuredImage: data.featuredImage,
+            imageCaption: data.imageCaption,
+            videoUrl: data.videoUrl,
+            isFeatured: data.isFeatured,
+            isBreaking: data.isBreaking,
+            status: data.status,
+            categoryId: data.categoryId,
+            subCategoryId: data.subCategoryId || null,
             slug,
             authorId,
         },
@@ -24,6 +40,7 @@ const getAllNews = async () => {
     return await prisma.post.findMany({
         include: {
             category: { select: { name: true, slug: true } },
+            subCategory: { select: { name: true, slug: true } },
             author: { select: { name: true, image: true } },
         },
         orderBy: { createdAt: "desc" },
@@ -41,6 +58,7 @@ const getNewsBySlug = async (slug: string) => {
             },
             include: {
                 category: true, 
+                subCategory: true,
                 author: { 
                     select: { name: true, image: true } 
                 },
@@ -56,6 +74,7 @@ const getNewsBySlug = async (slug: string) => {
             where: { slug },
             include: {
                 category: true,
+                subCategory: true,
                 author: { 
                     select: { name: true, image: true } 
                 },
@@ -70,14 +89,27 @@ const getNewsBySlug = async (slug: string) => {
 };
 
 const updateNews = async (id: string, data: any) => {
-    let updateData = { ...data };
-    
+    const updateData: any = {
+        title: data.title,
+        content: data.content,
+        summary: data.summary,
+        featuredImage: data.featuredImage,
+        imageCaption: data.imageCaption,
+        videoUrl: data.videoUrl,
+        isFeatured: data.isFeatured,
+        isBreaking: data.isBreaking,
+        status: data.status,
+        categoryId: data.categoryId,
+        subCategoryId: data.subCategoryId || null,
+    };
+
     if (data.title) {
         updateData.slug = data.title
             .trim()
             .toLowerCase()
-            .replace(/[^\w\s-]/g, "")
-            .replace(/[\s_-]+/g, "-")
+            .replace(/[\s_]+/g, "-") 
+            .replace(/[^\u0980-\u09FFa-z0-9-]/g, "") 
+            .replace(/-+/g, "-") 
             .replace(/^-+|-+$/g, "");
     }
 
@@ -94,6 +126,7 @@ const deleteNews = async (id: string) => {
 };
 
 export const NewsService = {
+    getAnyUser,
     createNews,
     getAllNews,
     getNewsBySlug,

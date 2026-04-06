@@ -3,16 +3,17 @@ import { NewsService } from "./news.service.js";
 
 const createNews = async (req: Request, res: Response) => {
     try {
-        const user = req.user;
+        const defaultUser = await NewsService.getAnyUser();
 
-        if (!user) {
-            return res.status(401).json({
+        if (!defaultUser) {
+            return res.status(404).json({
                 success: false,
-                message: "User not found in request"
+                message: "User not found in database"
             });
         }
 
-        const result = await NewsService.createNews(req.body, user.id);
+        const result = await NewsService.createNews(req.body, defaultUser.id);
+        
         res.status(201).json({
             success: true,
             message: "News created successfully",
@@ -35,15 +36,13 @@ const getAllNews = async (req: Request, res: Response) => {
 const getSingleNews = async (req: Request, res: Response) => {
     try {
         const { slug } = req.params;
-        
         const decodedSlug = decodeURIComponent(slug);
-
         const result = await NewsService.getNewsBySlug(decodedSlug);
 
         if (!result) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "News not found in database" 
+            return res.status(404).json({
+                success: false,
+                message: "News not found"
             });
         }
 
@@ -55,10 +54,10 @@ const getSingleNews = async (req: Request, res: Response) => {
 
 const updateNews = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id as string;
+        const id = req.params.id;
 
         if (!id) {
-            return res.status(400).json({ success: false, message: "News ID is required" });
+            return res.status(400).json({ success: false, message: "ID required" });
         }
 
         const result = await NewsService.updateNews(id, req.body);
@@ -74,10 +73,10 @@ const updateNews = async (req: Request, res: Response) => {
 
 const deleteNews = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id as string;
+        const id = req.params.id;
 
         if (!id) {
-            return res.status(400).json({ success: false, message: "News ID is required" });
+            return res.status(400).json({ success: false, message: "ID required" });
         }
 
         await NewsService.deleteNews(id);
